@@ -1,0 +1,50 @@
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Main</title>
+    <script src="main.js"></script>
+    <script src="node_modules/lodash/lodash.js"></script>
+    <script src="node_modules/platform/platform.js"></script>
+    <script src="node_modules/benchmark/benchmark.js"></script>
+</head>
+
+<body class="body">
+    <div id="elm-application"></div>
+    <script>
+        const app = Elm.Main.init({
+            node: document.getElementById('elm-application')
+        });
+        const vectors = Array(100_000).fill(0).map(() => {
+            return [
+                Math.floor(Math.random() * 1000),
+                Math.floor(Math.random() * 1000)
+            ];
+        })
+        app.ports.messageReceiver.send({ "Init": vectors });
+
+        const suite = new Benchmark.Suite;
+
+        suite
+            .add("Native Set", () => {
+                app.ports.messageReceiver.send({ "Noop": true });
+                const set = new Set();
+                vectors.forEach(vector => {
+                    set.add(vector);
+                });
+            })
+            .add("Elm Set", () => {
+                app.ports.messageReceiver.send({ "Reinsert": true });
+            })
+            // add listeners
+            .on('cycle', function (event) {
+                console.log(String(event.target));
+            })
+            .on('complete', function () {
+                console.log('Fastest is ' + this.filter('fastest').map('name'));
+            })
+            // run async
+            .run({ 'async': true });
+
+    </script>
+</body>
