@@ -23,12 +23,56 @@
         })
         app.ports.messageReceiver.send({ "Init": vectors });
 
+
+        class TupleSet {
+            data = new Map();
+
+            add([first, second]) {
+                if (!this.data.has(first)) {
+                    this.data.set(first, new Set());
+                }
+                this.data.get(first).add(second);
+                return this;
+            };
+
+            has([first, second]) {
+                return (
+                    this.data.has(first) &&
+                    this.data.get(first).has(second)
+                );
+            };
+
+            delete([first, second]) {
+                if (!this.data.has(first) ||
+                    !this.data.get(first).has(second)
+                ) return false;
+
+                this.data.get(first).delete(second);
+                if (this.data.get(first).size === 0) {
+                    this.data.delete(first);
+                }
+
+                return true;
+            };
+        }
+
         const suite = new Benchmark.Suite;
 
         suite
             .add("Native Set", () => {
                 app.ports.messageReceiver.send({ "Noop": true });
-                const set = new Set();
+
+                // Must use custom TupleSet rather than native Set
+                // directly because JavaScript native Set uses 
+                // reference equality, meaning that '[0, 0] === [0, 0]'
+                // is false, so inserting both tuples into a JavaScript
+                // Set would result in a set with two values.
+                // Elm, on the other hand, uses value equality, and
+                // would dedupe the two tuples.
+                // To make sure we are comparing like with like, we
+                // use a TupleSet which simulates Elm's value equality
+                // on tuples.
+                const set = new TupleSet();
                 vectors.forEach(vector => {
                     set.add(vector);
                 });
